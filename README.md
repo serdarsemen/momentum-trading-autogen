@@ -214,5 +214,46 @@ def create_optimizer_agent(config_list):
     )
 ```
 
+## Interactive Dashboard
+
+The project includes an interactive Streamlit dashboard for visualizing and analyzing momentum trading strategies.
+
+### Dashboard Features
+
+- **Multiple Analysis Types**:
+  - Single Pair Analysis: Examine one stock with a specific MA pair
+  - Multiple Pairs Analysis: Compare different MA pairs for one stock
+  - Multiple Stocks Analysis: Compare different stocks with the same MA pair
+  
+- **Interactive Controls**:
+  - Stock symbol selection
+  - Date range selection
+  - MA parameter configuration with sliders
+  - Custom MA pair addition
+  - Multiple stocks selection
+
+- **Comprehensive Visualizations**:
+  - Price charts with MA lines and buy/sell signals
+  - Portfolio performance comparison (strategy vs buy & hold)
+  - Returns comparison across different MA pairs or stocks
+  - Cumulative returns visualization
+
+- **Performance Metrics**:
+  - Total return
+  - Sharpe ratio
+  - Maximum drawdown
+  - Win rate
+
+### Running the Dashboard
+
+To run the interactive dashboard:
+
+```bash
+# Install Streamlit if not already installed
+pip install streamlit plotly
+
+# Launch the dashboard
+streamlit run app.py
+
 ## Disclaimer
 This project is intended for educational purposes only and is not financial advice. Trading involves risk, and past performance is not indicative of future results. Always consult a qualified financial advisor before making investment decisions.
