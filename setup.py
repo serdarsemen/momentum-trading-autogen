@@ -40,7 +40,7 @@ setup(
     description="Momentum Trading Strategy Analysis with AutoGen",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/vantuandang/momentum-trading-autogen",
+    url="https://github.com/danglive/momentum-trading-autogen",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
