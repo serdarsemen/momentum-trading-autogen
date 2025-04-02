@@ -51,9 +51,9 @@ def run_manual_analysis():
     )
     
     # Print results
-    print(f"Analysis complete!")
-    print(f"Final return: {results['final_return']:.2%}")
-    print(f"Results saved to output directory")
+    print("Analysis complete!")
+    print("Final return: {results['final_return']:.2%}")
+    print("Results saved to output directory")
     
     # Show plots
     plt.show()
@@ -63,11 +63,13 @@ def run_agent_analysis():
     Run a momentum trading strategy analysis using AutoGen agents.
     """
     # Check for API key
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Please set your OpenAI API key as an environment variable:")
-        print("export OPENAI_API_KEY='your-api-key'")
+        # print("Error: OPENAI_API_KEY environment variable not set")
+        # print("Please set your OpenAI API key as an environment variable:")
+        # print("export OPENAI_API_KEY='your-api-key'")
+        print("Error: AZURE_OPENAI_API_KEY environment variable not set")
         return
     
     # Create output directory if it doesn't exist
