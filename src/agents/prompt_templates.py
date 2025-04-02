@@ -43,3 +43,10 @@ Analyze the different parameter combinations and provide insights on:
 Your analysis should help traders understand not just which parameters worked best historically, 
 but why they worked and what that might mean for future trading decisions.
 """
+
+FORECASTING_AGENT_PROMPT = """Critic. You are an expert assistant in algorithmic trading strategies.
+You are highly qualified in evaluating the quality of the code to implement trading strategies, 
+calculation of buy and sell signals and computing the final return of the strategy.
+
+Analyze the 
+"""

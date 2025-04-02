@@ -2,7 +2,7 @@
 Agent setup and initialization for the AutoGen framework.
 """
 
-import os
+# import os
 from typing import List, Tuple, Dict, Any, Optional
 
 from autogen import (
@@ -17,7 +17,8 @@ from autogen.coding import LocalCommandLineCodeExecutor
 from .prompt_templates import (
     CODE_GENERATOR_PROMPT, 
     CRITIC_AGENT_PROMPT, 
-    COMPARER_AGENT_PROMPT
+    COMPARER_AGENT_PROMPT,
+    FORECASTING_AGENT_PROMPT  # Added missing import
 )
 
 def create_agents(
@@ -85,12 +86,25 @@ def create_agents(
         human_input_mode="NEVER"
     )
     
+    # Create the Forecasting agent
+    forecasting_agent = AssistantAgent(
+        name="Forecasting_agent",
+        system_message=FORECASTING_AGENT_PROMPT ,
+        llm_config ={"config_list": config_list
+        },
+        human_input_mode="NEVER"
+    )
+
+
+
+    
     # Group the agents together
     agents = {
         "code_generator": code_generator,
         "code_executor": code_executor_agent,
         "critic": critic,
-        "comparer": comparer
+        "comparer": comparer,
+        "forecasting_agent": forecasting_agent
     }
     
     return agents
@@ -123,6 +137,11 @@ def create_group_chat(agents: Dict[str, ConversableAgent], config_list: List[Dic
     )
     
     return manager
+
+
+
+
+
 
 def run_momentum_analysis(
     agents: Dict[str, ConversableAgent],
@@ -159,20 +178,20 @@ def run_momentum_analysis(
         date_range = f"since {start_date}"
         
     message = f"""Let's proceed step by step:
-1- Get the current date.
-2- Propose a Python code implementation of a momentum trading strategy with 2 moving averages: short and long.
-3- Create the Python file with this structure:
-   - Use 'import pandas as pd, numpy as np, matplotlib.pyplot as plt, yfinance as yf'
-   - Import ssl and add 'try: _create_unverified_https_context = ssl._create_unverified_context; except AttributeError: pass; else: ssl._create_default_https_context = _create_unverified_https_context' to handle SSL issues
-   - For Yahoo Finance data, use proper error handling and consider using a try-except block
-   - Save in a file called 'momentum_trading_strategy.py'
-4- Apply this code to {symbol} historical price {date_range}, with the following pairs of moving averages: {ma_pairs_str}.
-5- For each pair of moving averages, save the results in a csv file called '{symbol.lower()}_trading_strategy_{{pair_of_moving_average}}.csv'
-6- For each pair of moving averages, plot this trading strategy and save it in a file called '{symbol.lower()}_trading_strategy_{{pair_of_moving_average}}.png'
-7- For each pair of moving averages, calculate buy and sell signals. Plot them and save it in a file called 'buy_sell_signals_{{pair_of_moving_average}}.png'
-8- For each pair of moving averages, compute the final return of the strategy, and provide these results in a markdown format.
+            1- Get the current date.
+            2- Propose a Python code implementation of a momentum trading strategy with 2 moving averages: short and long.
+            3- Create the Python file with this structure:
+            - Use 'import pandas as pd, numpy as np, matplotlib.pyplot as plt, yfinance as yf'
+            - Import ssl and add 'try: _create_unverified_https_context = ssl._create_unverified_context; except AttributeError: pass; else: ssl._create_default_https_context = _create_unverified_https_context' to handle SSL issues
+            - For Yahoo Finance data, use proper error handling and consider using a try-except block
+            - Save in a file called 'momentum_trading_strategy.py'
+            4- Apply this code to {symbol} historical price {date_range}, with the following pairs of moving averages: {ma_pairs_str}.
+            5- For each pair of moving averages, save the results in a csv file called '{symbol.lower()}_trading_strategy_{{pair_of_moving_average}}.csv'
+            6- For each pair of moving averages, plot this trading strategy and save it in a file called '{symbol.lower()}_trading_strategy_{{pair_of_moving_average}}.png'
+            7- For each pair of moving averages, calculate buy and sell signals. Plot them and save it in a file called 'buy_sell_signals_{{pair_of_moving_average}}.png'
+            8- For each pair of moving averages, compute the final return of the strategy, and provide these results in a markdown format.
 
-Make sure to save the strategy implementation file properly before executing it.
+            Make sure to save the strategy implementation file properly before executing it.
 """
     
     # Initiate the chat with the message

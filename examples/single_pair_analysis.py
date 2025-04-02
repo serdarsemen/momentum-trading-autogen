@@ -5,7 +5,7 @@ Example of running a momentum trading strategy analysis with a single MA pair.
 import os
 import sys
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
+from datetime import datetime  #, timedelta
 
 # Add the parent directory to the path so we can import the src package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.agents import create_agents, run_momentum_analysis
 from src.utils import get_current_date, download_stock_data
 from src.strategies import (
-    momentum_trading_strategy, 
-    compute_returns,
-    plot_trading_strategy,
-    plot_buy_sell_signals,
+    # momentum_trading_strategy,
+    # compute_returns,
+    # plot_trading_strategy,
+    # plot_buy_sell_signals,
     run_strategy_analysis
 )
 
@@ -41,7 +41,7 @@ def run_manual_analysis():
     
     # Run strategy
     print("Running strategy...")
-    results = run_strategy_analysis(
+    run_strategy_analysis(
         df, 
         short_window, 
         long_window, 
@@ -69,7 +69,7 @@ def run_agent_analysis():
         # print("Error: OPENAI_API_KEY environment variable not set")
         # print("Please set your OpenAI API key as an environment variable:")
         # print("export OPENAI_API_KEY='your-api-key'")
-        print("Error: AZURE_OPENAI_API_KEY environment variable not set")
+        print("API Key Error: Please make sure OPENAI_API_KEY is set in your .env file.")
         return
     
     # Create output directory if it doesn't exist

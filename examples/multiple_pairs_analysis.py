@@ -91,11 +91,13 @@ def run_agent_multiple_pairs_analysis():
     Run a momentum trading strategy analysis with multiple MA pairs using AutoGen agents.
     """
     # Check for API key
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Please set your OpenAI API key as an environment variable:")
-        print("export OPENAI_API_KEY='your-api-key'")
+        # print("Error: OPENAI_API_KEY environment variable not set")
+        # print("Please set your OpenAI API key as an environment variable:")
+        # print("export OPENAI_API_KEY='your-api-key'")
+        print("API Key Error: Please make sure OPENAI_API_KEY is set in your .env file.")
         return
     
     # Create output directory if it doesn't exist
