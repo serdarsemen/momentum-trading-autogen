@@ -139,26 +139,26 @@ with st.sidebar:
     # Analysis type selection
     st.markdown("### Analysis Type")
     analysis_type = st.radio(
-        "",
+        "Analysis Type",
         ["Single Pair", "Multiple Pairs", "Multiple Stocks"],
         label_visibility="collapsed"
     )
     
     # Stock symbol
     st.markdown("### Stock Symbol")
-    symbol = st.text_input("", value="NVDA", label_visibility="collapsed")
+    symbol = st.text_input("Stock Symbol", value="NVDA", label_visibility="collapsed")
     
     # Date range
     st.markdown("### Start Date")
     start_date = st.date_input(
-        "",
+        "Start Date",
         datetime.now() - timedelta(days=365),
         label_visibility="collapsed"
     ).strftime('%Y-%m-%d')
     
     st.markdown("### End Date")
     end_date = st.date_input(
-        "",
+        "End Date",
         datetime.now(),
         label_visibility="collapsed"
     ).strftime('%Y-%m-%d')
@@ -166,10 +166,10 @@ with st.sidebar:
     # MA parameters
     if analysis_type == "Single Pair":
         st.markdown("### Short Window")
-        short_window = st.slider("", 5, 50, 5, 5, label_visibility="collapsed")
+        short_window = st.slider("Short Window", 5, 50, 5, 5, label_visibility="collapsed")
         
         st.markdown("### Long Window")
-        long_window = st.slider("", 20, 200, 20, 5, label_visibility="collapsed")
+        long_window = st.slider("Long Window", 20, 200, 20, 5, label_visibility="collapsed")
         
         ma_pairs = [(short_window, long_window)]
     

@@ -44,9 +44,22 @@ Your analysis should help traders understand not just which parameters worked be
 but why they worked and what that might mean for future trading decisions.
 """
 
-FORECASTING_AGENT_PROMPT = """Critic. You are an expert assistant in algorithmic trading strategies.
-You are highly qualified in evaluating the quality of the code to implement trading strategies, 
-calculation of buy and sell signals and computing the final return of the strategy.
+FORECASTING_AGENT_PROMPT = """You are an expert in stock price forecasting and technical analysis.
+Your task is to analyze historical price data and momentum indicators to generate short-term
+price movement forecasts.
 
-Analyze the 
+Analyze the provided data focusing on:
+1. Recent price trends and volatility patterns
+2. Moving average convergence/divergence signals
+3. Volume patterns and their correlation with price movements
+4. Support and resistance levels based on historical trading ranges
+
+Provide a probabilistic forecast including:
+- Most likely price direction for the next 5-10 trading days
+- Key price levels to watch (support, resistance, breakout points)
+- Confidence level in your forecast (low, medium, high)
+- Potential external factors that could invalidate your forecast
+
+Your forecast should be data-driven, objective, and include appropriate caveats about
+market uncertainty.
 """
