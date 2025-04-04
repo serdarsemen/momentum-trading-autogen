@@ -26,6 +26,12 @@ from .stochastic_strategy import (
     plot_stochastic_strategy,
     run_stochastic_analysis
 )
+from .bollinger_bands_strategy import (
+    bollinger_bands_strategy,
+    calculate_bollinger_bands,
+    plot_bollinger_bands_strategy,
+    run_bollinger_bands_analysis
+)
 
 __all__ = [
     'momentum_trading_strategy',
@@ -43,5 +49,9 @@ __all__ = [
     'stochastic_trading_strategy',
     'calculate_stochastic',
     'plot_stochastic_strategy',
-    'run_stochastic_analysis'
+    'run_stochastic_analysis',
+    'bollinger_bands_strategy',
+    'calculate_bollinger_bands',
+    'plot_bollinger_bands_strategy',
+    'run_bollinger_bands_analysis'
 ]
