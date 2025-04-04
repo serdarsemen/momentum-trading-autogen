@@ -20,6 +20,12 @@ from .macd_strategy import (
     plot_macd_strategy,
     run_macd_analysis
 )
+from .stochastic_strategy import (
+    stochastic_trading_strategy,
+    calculate_stochastic,
+    plot_stochastic_strategy,
+    run_stochastic_analysis
+)
 
 __all__ = [
     'momentum_trading_strategy',
@@ -33,5 +39,9 @@ __all__ = [
     'macd_trading_strategy',
     'calculate_macd',
     'plot_macd_strategy',
-    'run_macd_analysis'
+    'run_macd_analysis',
+    'stochastic_trading_strategy',
+    'calculate_stochastic',
+    'plot_stochastic_strategy',
+    'run_stochastic_analysis'
 ]
