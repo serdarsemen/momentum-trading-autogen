@@ -34,18 +34,18 @@ def run_single_analysis(args):
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nAnalyzing {args.symbol} with MACD parameters:")
         print(f"Fast Period: {args.fast_period}")
         print(f"Slow Period: {args.slow_period}")
         print(f"Signal Period: {args.signal_period}")
         print(f"Histogram Threshold: {args.threshold}\n")
-        
+
         # Run analysis
         results = run_macd_analysis(
             df,
@@ -57,13 +57,13 @@ def run_single_analysis(args):
             save_results=True,
             output_dir=args.output
         )
-        
+
         # Print results
         print(f"\nResults for {args.symbol} MACD Strategy:")
         print(f"Final Return: {results['final_return']:.2%}")
         print(f"Strategy plots saved to: {results['strategy_plot_path']}")
         print(f"Data saved to: {results['csv_path']}")
-        
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
@@ -73,22 +73,22 @@ def run_multi_parameter_analysis(args):
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nRunning multi-parameter analysis for {args.symbol}")
-        
+
         # Define parameter combinations to test
         fast_periods = [8, 12, 15]
         slow_periods = [21, 26, 30]
         signal_periods = [7, 9, 11]
         thresholds = [0.0, 0.1, 0.2]
-        
+
         results_summary = []
-        
+
         # Test different parameter combinations
         for fast in fast_periods:
             for slow in slow_periods:
@@ -98,7 +98,7 @@ def run_multi_parameter_analysis(args):
                     for threshold in thresholds:
                         print(f"\nTesting parameters: Fast={fast}, Slow={slow}, "
                               f"Signal={signal}, Threshold={threshold}")
-                        
+
                         results = run_macd_analysis(
                             df.copy(),
                             fast_period=fast,
@@ -109,7 +109,7 @@ def run_multi_parameter_analysis(args):
                             save_results=True,
                             output_dir=args.output
                         )
-                        
+
                         results_summary.append({
                             'fast_period': fast,
                             'slow_period': slow,
@@ -117,14 +117,14 @@ def run_multi_parameter_analysis(args):
                             'threshold': threshold,
                             'final_return': results['final_return']
                         })
-        
+
         # Print summary
         print("\nParameter Optimization Results:")
         for result in sorted(results_summary, key=lambda x: x['final_return'], reverse=True):
             print(f"Fast: {result['fast_period']}, Slow: {result['slow_period']}, "
                   f"Signal: {result['signal_period']}, Threshold: {result['threshold']}, "
                   f"Return: {result['final_return']:.2%}")
-            
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
@@ -134,24 +134,24 @@ def run_multi_stock_analysis(args):
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         stocks = [s.strip().upper() for s in args.symbols.split(',')]
         print(f"\nAnalyzing multiple stocks with parameters:")
         print(f"Fast Period: {args.fast_period}")
         print(f"Slow Period: {args.slow_period}")
         print(f"Signal Period: {args.signal_period}")
         print(f"Histogram Threshold: {args.threshold}\n")
-        
+
         results_summary = []
-        
+
         for symbol in stocks:
             print(f"\nAnalyzing {symbol}...")
-            
+
             # Prepare data
             df = prepare_stock_data(symbol, start_date, end_date)
             if df is None:
                 continue
-            
+
             # Run analysis
             results = run_macd_analysis(
                 df,
@@ -163,17 +163,17 @@ def run_multi_stock_analysis(args):
                 save_results=True,
                 output_dir=args.output
             )
-            
+
             results_summary.append({
                 'symbol': symbol,
                 'final_return': results['final_return']
             })
-        
+
         # Print summary
         print("\nMulti-Stock Analysis Results:")
         for result in sorted(results_summary, key=lambda x: x['final_return'], reverse=True):
             print(f"Symbol: {result['symbol']}, Return: {result['final_return']:.2%}")
-            
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
@@ -181,7 +181,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='MACD (Moving Average Convergence Divergence) Trading Strategy Analysis'
     )
-    
+
     # Main command argument
     parser.add_argument(
         'command',
@@ -189,7 +189,16 @@ def main():
         help='Analysis type: single (one stock), optimize (parameter optimization), '
              'stocks (multiple stocks)'
     )
-    
+
+    # Add provider argument with azure as default
+    parser.add_argument(
+        '--provider',
+        type=str,
+        choices=['openai', 'azure', 'gemini', 'groq'],
+        default='azure',
+        help='LLM provider to use (default: azure)'
+    )
+
     # Optional arguments
     parser.add_argument(
         '--symbol',
@@ -245,21 +254,24 @@ def main():
         default='output',
         help='Output directory (default: output)'
     )
-    
+
     args = parser.parse_args()
-    
+
+    # Create agents with specified provider
+    agents = create_agents(provider=args.provider)
+
     # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
-    
+
     # Run appropriate analysis based on command
     if args.command == 'single':
-        print(f"Running single stock analysis for {args.symbol}")
-        run_single_analysis(args)
-    
+        print(f"Running single stock analysis for {args.symbol} using {args.provider}")
+        run_single_analysis(args, agents)
+
     elif args.command == 'optimize':
         print(f"Running parameter optimization for {args.symbol}")
         run_multi_parameter_analysis(args)
-    
+
     elif args.command == 'stocks':
         print(f"Running multi-stock analysis")
         run_multi_stock_analysis(args)

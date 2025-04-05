@@ -1,63 +1,197 @@
 """
-Agent setup and initialization for the AutoGen framework.
+Agent setup and initialization for the AutoGen framework with multiple LLM providers.
 """
 
-# import os
 from typing import List, Tuple, Dict, Any, Optional
-
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
+from groq import Groq
+from openai import AzureOpenAI, OpenAI
 from autogen import (
-    AssistantAgent, 
-    UserProxyAgent, 
-    GroupChat, 
+    AssistantAgent,
+    UserProxyAgent,
+    GroupChat,
     GroupChatManager,
     ConversableAgent
 )
 from autogen.coding import LocalCommandLineCodeExecutor
 
 from .prompt_templates import (
-    CODE_GENERATOR_PROMPT, 
-    CRITIC_AGENT_PROMPT, 
+    CODE_GENERATOR_PROMPT,
+    CRITIC_AGENT_PROMPT,
     COMPARER_AGENT_PROMPT,
-    FORECASTING_AGENT_PROMPT  # Added missing import
+    FORECASTING_AGENT_PROMPT
 )
 
+# Load environment variables from .env file
+load_dotenv()
+
+def get_api_key(provider: str) -> str:
+    """
+    Get API key for the specified provider from environment variables.
+
+    Args:
+        provider: LLM provider ('openai', 'azure', 'gemini', or 'groq')
+
+    Returns:
+        API key for the specified provider
+    """
+    env_var_map = {
+        'openai': 'OPENAI_API_KEY',
+        'azure': 'AZURE_OPENAI_API_KEY',
+        'gemini': 'GEMINI_API_KEY',
+        'groq': 'GROQ_API_KEY'
+    }
+
+    env_var = env_var_map.get(provider.lower())
+    if not env_var:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+    api_key = os.getenv(env_var)
+    if not api_key:
+        raise ValueError(f"API key not found in .env file for provider: {provider}. "
+                        f"Please set {env_var} in your .env file.")
+
+    return api_key
+
+def setup_llm_config(
+    provider: str,
+    model: str = None,
+    azure_endpoint: str = None,
+    azure_deployment: str = None,
+    azure_api_version: str = "2024-02-15-preview"
+) -> List[Dict[str, Any]]:
+    """
+    Set up LLM configuration based on the provider.
+
+    Args:
+        provider: LLM provider ('openai', 'azure', 'gemini', or 'groq')
+        model: Model name (optional, provider-specific default will be used if not specified)
+        azure_endpoint: Azure OpenAI endpoint URL (optional, required for Azure)
+        azure_deployment: Azure deployment name (optional, required for Azure)
+        azure_api_version: Azure API version (optional)
+
+    Returns:
+        Configuration list for the LLM
+    """
+    api_key = get_api_key(provider)
+
+    if provider.lower() == 'openai':
+        default_model = "gpt-4" if not model else model
+        return [{
+            "model": default_model,
+            "api_key": api_key,
+            "client": OpenAI(api_key=api_key)
+        }]
+
+    elif provider.lower() == 'azure':
+        if not azure_endpoint:
+            azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+        if not azure_deployment:
+            azure_deployment = os.getenv('AZURE_OPENAI_DEPLOYMENT')
+
+        if not azure_endpoint or not azure_deployment:
+            raise ValueError("Azure OpenAI requires endpoint URL and deployment name. "
+                           "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT in .env file.")
+
+        client = AzureOpenAI(
+            api_key=api_key,
+            api_version=azure_api_version,
+            azure_endpoint=azure_endpoint
+        )
+
+        return [{
+            "model": azure_deployment,
+            "api_key": api_key,
+            "api_version": azure_api_version,
+            "azure_endpoint": azure_endpoint,
+            "azure_deployment": azure_deployment,
+            "client": client,
+            "provider": "azure"
+        }]
+
+    elif provider.lower() == 'gemini':
+        default_model = "gemini-pro" if not model else model
+        genai.configure(api_key=api_key)
+        return [{
+            "model": default_model,
+            "api_key": api_key,
+            "config_list": genai.get_default_generation_config(),
+            "provider": "gemini"
+        }]
+
+    elif provider.lower() == 'groq':
+        default_model = "mixtral-8x7b-32768" if not model else model
+        client = Groq(api_key=api_key)
+        return [{
+            "model": default_model,
+            "api_key": api_key,
+            "client": client,
+            "provider": "groq"
+        }]
+
+    else:
+        raise ValueError(f"Unsupported provider: {provider}. Use 'openai', 'azure', 'gemini', or 'groq'")
+
 def create_agents(
-    api_key: str, 
-    model: str = "gpt-4o",
-    work_dir: str = "output"
+    provider: str = "openai",
+    model: str = None,
+    work_dir: str = "output",
+    azure_endpoint: str = None,
+    azure_deployment: str = None,
+    azure_api_version: str = "2024-02-15-preview"
 ) -> Dict[str, ConversableAgent]:
     """
-    Create and initialize the AutoGen agents for the momentum trading analysis.
-    
+    Create and initialize the AutoGen agents with support for multiple LLM providers.
+
     Args:
-        api_key: OpenAI API key
-        model: Model to use for the assistants
+        provider: LLM provider ('openai', 'azure', 'gemini', or 'groq')
+        model: Model name (optional)
         work_dir: Directory for code execution
-        
+        azure_endpoint: Azure OpenAI endpoint URL
+        azure_deployment: Azure deployment name
+        azure_api_version: Azure API version
+
     Returns:
         Dictionary containing all the initialized agents
     """
-    # Set up config list for the LLM
-    config_list = [{"model": model, "api_key": api_key}]
-    
+    # Set up LLM configuration
+    config_list = setup_llm_config(
+        provider,
+        model,
+        azure_endpoint,
+        azure_deployment,
+        azure_api_version
+    )
+
     # Initialize the code executor
     code_executor = LocalCommandLineCodeExecutor(
         timeout=60,
         work_dir=work_dir,
     )
-    
-    # Create the Code Generator agent
-    code_generator = AssistantAgent(
-        name="Code_generator",
-        system_message=CODE_GENERATOR_PROMPT,
-        llm_config={
-            "config_list": config_list
-        },
-        human_input_mode="NEVER"
-    )
-    
-    # Create the Code Executor agent
-    code_executor_agent = UserProxyAgent(
+
+    # Create agents with the configured LLM
+    agents = {}
+    agent_configs = [
+        ("code_generator", CODE_GENERATOR_PROMPT),
+        ("critic", CRITIC_AGENT_PROMPT),
+        ("comparer", COMPARER_AGENT_PROMPT),
+        ("forecasting_agent", FORECASTING_AGENT_PROMPT)
+    ]
+
+    for name, prompt in agent_configs:
+        agents[name] = AssistantAgent(
+            name=name,
+            system_message=prompt,
+            llm_config={
+                "config_list": config_list,
+                "provider": provider
+            }
+        )
+
+    # Add the code executor agent
+    agents["code_executor"] = UserProxyAgent(
         name="Code_executor",
         code_execution_config={
             "executor": code_executor
@@ -65,77 +199,48 @@ def create_agents(
         llm_config=False,
         human_input_mode="NEVER"
     )
-    
-    # Create the Critic agent
-    critic = AssistantAgent(
-        name="Critic_agent",
-        system_message=CRITIC_AGENT_PROMPT,
-        llm_config={
-            "config_list": config_list
-        },
-        human_input_mode="NEVER"
-    )
-    
-    # Create the Comparer agent
-    comparer = AssistantAgent(
-        name="Comparer",
-        system_message=COMPARER_AGENT_PROMPT,
-        llm_config={
-            "config_list": config_list
-        },
-        human_input_mode="NEVER"
-    )
-    
-    # Create the Forecasting agent
-    forecasting_agent = AssistantAgent(
-        name="Forecasting_agent",
-        system_message=FORECASTING_AGENT_PROMPT ,
-        llm_config ={"config_list": config_list
-        },
-        human_input_mode="NEVER"
-    )
 
-
-
-    
-    # Group the agents together
-    agents = {
-        "code_generator": code_generator,
-        "code_executor": code_executor_agent,
-        "critic": critic,
-        "comparer": comparer,
-        "forecasting_agent": forecasting_agent
-    }
-    
     return agents
 
-def create_group_chat(agents: Dict[str, ConversableAgent], config_list: List[Dict[str, str]]) -> GroupChatManager:
+def create_group_chat(
+    agents: Dict[str, ConversableAgent],
+    provider: str = "openai",
+    config_list: Optional[List[Dict[str, Any]]] = None
+) -> GroupChatManager:
     """
     Create a GroupChat and Manager from the given agents.
-    
+
     Args:
         agents: Dictionary of agents to include in the group chat
-        config_list: LLM config list
-        
+        provider: LLM provider ('openai' or 'gemini')
+        config_list: Optional LLM config list
+
     Returns:
         GroupChatManager instance
     """
     # Create a list of agents for the group chat
     agent_list = list(agents.values())
-    
+
+    # If no config_list provided, extract from code_generator agent
+    if config_list is None:
+        config_list = agents["code_generator"].llm_config["config_list"]
+
     # Create the group chat
     groupchat = GroupChat(
         agents=agent_list,
         messages=[],
         max_round=20
     )
-    
+
     # Create the group chat manager
     manager = GroupChatManager(
-        groupchat=groupchat, 
-        llm_config={"config_list": config_list}
+        groupchat=groupchat,
+        llm_config={
+            "config_list": config_list,
+            "provider": provider
+        }
     )
-    
+
     return manager
 
 
@@ -152,14 +257,14 @@ def run_momentum_analysis(
 ) -> Dict[str, Any]:
     """
     Run the momentum trading strategy analysis with the given parameters.
-    
+
     Args:
         agents: Dictionary of agents
         symbol: Stock symbol to analyze
         start_date: Start date for historical data
         end_date: End date for historical data (defaults to current date)
         ma_pairs: List of (short window, long window) pairs to analyze
-        
+
     Returns:
         Dictionary with results from the analysis
     """
@@ -167,16 +272,16 @@ def run_momentum_analysis(
     api_key = agents["code_generator"].llm_config["config_list"][0]["api_key"]
     config_list = [{"model": "gpt-4o", "api_key": api_key}]
     manager = create_group_chat(agents, config_list)
-    
+
     # Format the MA pairs for the prompt
     ma_pairs_str = ", ".join([f"({short}, {long})" for short, long in ma_pairs])
-    
+
     # Create the analysis message with enhanced instructions
     if end_date:
         date_range = f"from {start_date} to {end_date}"
     else:
         date_range = f"since {start_date}"
-        
+
     message = f"""Let's proceed step by step:
             1- Get the current date.
             2- Propose a Python code implementation of a momentum trading strategy with 2 moving averages: short and long.
@@ -193,9 +298,9 @@ def run_momentum_analysis(
 
             Make sure to save the strategy implementation file properly before executing it.
 """
-    
+
     # Initiate the chat with the message
     result = agents["code_executor"].initiate_chat(manager, message=message)
-    
+
     # Return the result
     return result

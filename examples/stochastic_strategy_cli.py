@@ -10,7 +10,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.utils import download_stock_data, get_current_date
+from src.utils import download_stock_data, get_current_date, create_agents
 from src.strategies import run_stochastic_analysis
 
 def validate_date(date_str):
@@ -29,16 +29,16 @@ def prepare_stock_data(symbol, start_date, end_date):
             start_date = start_date.strftime('%Y-%m-%d')
         if isinstance(end_date, date):
             end_date = end_date.strftime('%Y-%m-%d')
-            
+
         df = download_stock_data(symbol, start_date, end_date)
-        
+
         if df.empty:
             print(f"No data available for {symbol}")
             return None
-            
+
         # Ensure the index is datetime
         df.index = pd.to_datetime(df.index)
-        
+
         # Ensure we have the required price column
         if 'Close' in df.columns:
             df['price'] = df['Close']
@@ -47,32 +47,32 @@ def prepare_stock_data(symbol, start_date, end_date):
         else:
             print(f"No price data found for {symbol}")
             return None
-            
+
         return df
-        
+
     except Exception as e:
         print(f"Error preparing data for {symbol}: {e}")
         return None
 
-def run_single_analysis(args):
+def run_single_analysis(args, agents):
     """Run analysis for a single stock with specified parameters."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nAnalyzing {args.symbol} with Stochastic parameters:")
         print(f"K Period: {args.k_period}")
         print(f"D Period: {args.d_period}")
         print(f"Smooth K: {args.smooth_k}")
         print(f"Oversold: {args.oversold}")
         print(f"Overbought: {args.overbought}\n")
-        
+
         # Run analysis
         results = run_stochastic_analysis(
             df,
@@ -83,45 +83,46 @@ def run_single_analysis(args):
             overbought=args.overbought,
             symbol=args.symbol,
             save_results=True,
-            output_dir=args.output
+            output_dir=args.output,
+            agents=agents
         )
-        
+
         # Print results
         print(f"Analysis Results for {args.symbol}:")
         print(f"Final Return: {results['final_return']:.2%}")
         print(f"Strategy plots saved to: {results['strategy_plot_path']}")
         print(f"Data saved to: {results['csv_path']}")
-        
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
-def run_multi_parameter_analysis(args):
+def run_multi_parameter_analysis(args, agents):
     """Run analysis with multiple parameter combinations."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nRunning multi-parameter analysis for {args.symbol}")
-        
+
         # Define parameter combinations to test
         k_periods = [5, 9, 14, 21]
         d_periods = [3, 5, 9]
         smooth_ks = [1, 2, 3]
-        
+
         results_summary = []
-        
+
         # Test different parameter combinations
         for k in k_periods:
             for d in d_periods:
                 for s in smooth_ks:
                     print(f"\nTesting parameters: K={k}, D={d}, Smooth={s}")
-                    
+
                     results = run_stochastic_analysis(
                         df.copy(),  # Use copy to prevent modifications to original data
                         k_period=k,
@@ -131,54 +132,55 @@ def run_multi_parameter_analysis(args):
                         overbought=args.overbought,
                         symbol=args.symbol,
                         save_results=True,
-                        output_dir=args.output
+                        output_dir=args.output,
+                        agents=agents
                     )
-                    
+
                     results_summary.append({
                         'k_period': k,
                         'd_period': d,
                         'smooth_k': s,
                         'final_return': results['final_return']
                     })
-        
+
         # Print summary of results
         print("\nParameter Optimization Results:")
         print("K Period | D Period | Smooth K | Return")
         print("-" * 45)
-        
+
         # Sort by return
         results_summary.sort(key=lambda x: x['final_return'], reverse=True)
-        
+
         for result in results_summary:
             print(f"{result['k_period']:8d} | {result['d_period']:8d} | "
                   f"{result['smooth_k']:8d} | {result['final_return']:7.2%}")
-        
+
     except Exception as e:
         print(f"Error running multi-parameter analysis: {e}")
 
-def run_multi_stock_analysis(args):
+def run_multi_stock_analysis(args, agents):
     """Run analysis on multiple stocks with same parameters."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         stocks = [s.strip().upper() for s in args.symbols.split(',')]
         print(f"\nAnalyzing multiple stocks with parameters:")
         print(f"K Period: {args.k_period}")
         print(f"D Period: {args.d_period}")
         print(f"Smooth K: {args.smooth_k}\n")
-        
+
         results_summary = []
-        
+
         for symbol in stocks:
             print(f"\nAnalyzing {symbol}...")
-            
+
             # Prepare data
             df = prepare_stock_data(symbol, start_date, end_date)
             if df is None:
                 continue
-            
+
             # Run analysis
             results = run_stochastic_analysis(
                 df,
@@ -189,28 +191,29 @@ def run_multi_stock_analysis(args):
                 overbought=args.overbought,
                 symbol=symbol,
                 save_results=True,
-                output_dir=args.output
+                output_dir=args.output,
+                agents=agents
             )
-            
+
             results_summary.append({
                 'symbol': symbol,
                 'final_return': results['final_return']
             })
-        
+
         if results_summary:
             # Print summary
             print("\nResults Summary:")
             print("Symbol | Return")
             print("-" * 20)
-            
+
             # Sort by return
             results_summary.sort(key=lambda x: x['final_return'], reverse=True)
-            
+
             for result in results_summary:
                 print(f"{result['symbol']:6s} | {result['final_return']:7.2%}")
         else:
             print("No valid results generated for any stocks.")
-        
+
     except Exception as e:
         print(f"Error running multi-stock analysis: {e}")
 
@@ -218,7 +221,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Stochastic Oscillator Trading Strategy Analysis'
     )
-    
+
     # Main command argument
     parser.add_argument(
         'command',
@@ -226,7 +229,16 @@ def main():
         help='Analysis type: single (one stock), optimize (parameter optimization), '
              'stocks (multiple stocks)'
     )
-    
+
+    # Add provider argument with azure as default
+    parser.add_argument(
+        '--provider',
+        type=str,
+        choices=['openai', 'azure', 'gemini', 'groq'],
+        default='azure',
+        help='LLM provider to use (default: azure)'
+    )
+
     # Optional arguments
     parser.add_argument(
         '--symbol',
@@ -288,25 +300,29 @@ def main():
         default='output',
         help='Output directory (default: output)'
     )
-    
+
     args = parser.parse_args()
-    
+
     # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
-    
+
+    # Create agents with specified provider
+    agents = create_agents(provider=args.provider)
+
     # Run appropriate analysis based on command
     if args.command == 'single':
-        print(f"Running single stock analysis for {args.symbol}")
-        run_single_analysis(args)
-    
+        print(f"Running single stock analysis for {args.symbol} using {args.provider}")
+        run_single_analysis(args, agents)
+
     elif args.command == 'optimize':
-        print(f"Running parameter optimization for {args.symbol}")
-        run_multi_parameter_analysis(args)
-    
+        print(f"Running parameter optimization for {args.symbol} using {args.provider}")
+        run_multi_parameter_analysis(args, agents)
+
     elif args.command == 'stocks':
-        print(f"Running multi-stock analysis")
-        run_multi_stock_analysis(args)
+        print(f"Running multi-stock analysis using {args.provider}")
+        run_multi_stock_analysis(args, agents)
 
 if __name__ == "__main__":
     main()
+
 

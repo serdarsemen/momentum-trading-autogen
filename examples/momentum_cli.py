@@ -7,16 +7,28 @@ from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from examples.manual_momentum_analysis import run_manual_analysis
-from examples.multi_pairs_momentum_analysis import run_multi_pair_analysis 
+from examples.multi_pairs_momentum_analysis import run_multi_pair_analysis
 from examples.multi_stock_analysis import run_multi_stock_analysis
 
 def main():
     parser = argparse.ArgumentParser(description='Momentum Trading Strategy Analysis')
-    
+
     # Main command argument
-    parser.add_argument('command', choices=['single', 'pairs', 'stocks'], 
-                        help='Analysis type: single (one pair for one stock), pairs (multiple MA pairs for one stock), stocks (one pair for multiple stocks)')
-    
+    parser.add_argument(
+        'command',
+        choices=['single', 'pairs', 'stocks'],
+        help='Analysis type: single (one pair for one stock), pairs (multiple MA pairs for one stock), stocks (one pair for multiple stocks)'
+    )
+
+    # Add provider argument with azure as default
+    parser.add_argument(
+        '--provider',
+        type=str,
+        choices=['openai', 'azure', 'gemini', 'groq'],
+        default='azure',
+        help='LLM provider to use (default: azure)'
+    )
+
     # Optional arguments
     parser.add_argument('--symbol', type=str, default='NVDA',
                         help='Stock symbol to analyze (default: NVDA)')
@@ -30,12 +42,12 @@ def main():
                         help='Long window size for MA (default: 20)')
     parser.add_argument('--output', type=str, default='output',
                         help='Output directory (default: output)')
-    
+
     args = parser.parse_args()
-    
+
     # Set output directory
     os.makedirs(args.output, exist_ok=True)
-    
+
     # Set environment variables for functions to use if needed
     os.environ['ANALYSIS_SYMBOL'] = args.symbol
     os.environ['ANALYSIS_START_DATE'] = args.start
@@ -44,20 +56,22 @@ def main():
     os.environ['ANALYSIS_SHORT_WINDOW'] = str(args.short)
     os.environ['ANALYSIS_LONG_WINDOW'] = str(args.long)
     os.environ['ANALYSIS_OUTPUT_DIR'] = args.output
-    
+
+    # Create agents with specified provider
+    agents = create_agents(provider=args.provider)
+
     # Run requested analysis
     if args.command == 'single':
-        print(f"Running single pair analysis for {args.symbol} with MA ({args.short}, {args.long})")
-        # Since original functions take no arguments, pass through environment variables
-        run_manual_analysis()
-    
+        print(f"Running single pair analysis for {args.symbol} with MA ({args.short}, {args.long}) using {args.provider}")
+        run_manual_analysis(args, agents)
+
     elif args.command == 'pairs':
-        print(f"Running multi-pair analysis for {args.symbol}")
-        run_multi_pair_analysis()
-    
+        print(f"Running multi-pair analysis for {args.symbol} using {args.provider}")
+        run_multi_pair_analysis(args, agents)
+
     elif args.command == 'stocks':
-        print(f"Running multi-stock analysis with MA ({args.short}, {args.long})")
-        run_multi_stock_analysis()
+        print(f"Running multi-stock analysis with MA ({args.short}, {args.long}) using {args.provider}")
+        run_multi_stock_analysis(args, agents)
 
 if __name__ == "__main__":
     main()

@@ -28,23 +28,23 @@ def prepare_stock_data(symbol, start_date, end_date):
         print(f"Error downloading data for {symbol}: {e}")
         return None
 
-def run_single_analysis(args):
+def run_single_analysis(args, agents):
     """Run analysis for a single stock with specified parameters."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nAnalyzing {args.symbol} with RSI parameters:")
         print(f"Period: {args.period}")
         print(f"Oversold: {args.oversold}")
         print(f"Overbought: {args.overbought}\n")
-        
+
         # Run analysis
         signals = rsi_trading_strategy(
             df,
@@ -53,51 +53,51 @@ def run_single_analysis(args):
             overbought=args.overbought
         )
         final_return, cum_returns = compute_returns(signals)
-        
+
         # Print results
         print(f"Analysis Results for {args.symbol}:")
         print(f"Final Return: {final_return:.2%}")
-        
+
         # Save results if output directory is specified
         if args.output:
             output_file = os.path.join(args.output, f"rsi_results_{args.symbol}.csv")
             signals.to_csv(output_file)
             print(f"Results saved to: {output_file}")
-        
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
-def run_multi_parameter_analysis(args):
+def run_multi_parameter_analysis(args, agents):
     """Run analysis with multiple parameter combinations."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         # Prepare data
         df = prepare_stock_data(args.symbol, start_date, end_date)
         if df is None:
             return
-            
+
         print(f"\nRunning multi-parameter analysis for {args.symbol}")
-        
+
         # Define parameter combinations to test
         periods = [9, 14, 21, 25]
         oversold_levels = [20, 25, 30, 35]
         overbought_levels = [65, 70, 75, 80]
-        
+
         results_summary = []
-        
+
         # Test different parameter combinations
         for period in periods:
             for oversold in oversold_levels:
                 for overbought in overbought_levels:
                     if oversold >= overbought:
                         continue
-                        
+
                     print(f"\nTesting parameters: Period={period}, "
                           f"Oversold={oversold}, Overbought={overbought}")
-                    
+
                     signals = rsi_trading_strategy(
                         df.copy(),
                         period=period,
@@ -105,46 +105,46 @@ def run_multi_parameter_analysis(args):
                         overbought=overbought
                     )
                     final_return, _ = compute_returns(signals)
-                    
+
                     results_summary.append({
                         'period': period,
                         'oversold': oversold,
                         'overbought': overbought,
                         'final_return': final_return
                     })
-        
+
         # Print summary
         print("\nParameter Optimization Results:")
         for result in sorted(results_summary, key=lambda x: x['final_return'], reverse=True):
             print(f"Period: {result['period']}, Oversold: {result['oversold']}, "
                   f"Overbought: {result['overbought']}, Return: {result['final_return']:.2%}")
-            
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
-def run_multi_stock_analysis(args):
+def run_multi_stock_analysis(args, agents):
     """Run analysis on multiple stocks with same parameters."""
     try:
         # Validate dates
         start_date = validate_date(args.start)
         end_date = validate_date(args.end) if args.end else get_current_date()
-        
+
         stocks = [s.strip().upper() for s in args.symbols.split(',')]
         print(f"\nAnalyzing multiple stocks with parameters:")
         print(f"Period: {args.period}")
         print(f"Oversold: {args.oversold}")
         print(f"Overbought: {args.overbought}\n")
-        
+
         results_summary = []
-        
+
         for symbol in stocks:
             print(f"\nAnalyzing {symbol}...")
-            
+
             # Prepare data
             df = prepare_stock_data(symbol, start_date, end_date)
             if df is None:
                 continue
-            
+
             # Run analysis
             signals = rsi_trading_strategy(
                 df,
@@ -153,17 +153,17 @@ def run_multi_stock_analysis(args):
                 overbought=args.overbought
             )
             final_return, _ = compute_returns(signals)
-            
+
             results_summary.append({
                 'symbol': symbol,
                 'final_return': final_return
             })
-        
+
         # Print summary
         print("\nMulti-Stock Analysis Results:")
         for result in sorted(results_summary, key=lambda x: x['final_return'], reverse=True):
             print(f"Symbol: {result['symbol']}, Return: {result['final_return']:.2%}")
-            
+
     except Exception as e:
         print(f"Error running analysis: {e}")
 
@@ -171,7 +171,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='RSI (Relative Strength Index) Trading Strategy Analysis'
     )
-    
+
     # Main command argument
     parser.add_argument(
         'command',
@@ -179,7 +179,16 @@ def main():
         help='Analysis type: single (one stock), optimize (parameter optimization), '
              'stocks (multiple stocks)'
     )
-    
+
+    # Add provider argument with azure as default
+    parser.add_argument(
+        '--provider',
+        type=str,
+        choices=['openai', 'azure', 'gemini', 'groq'],
+        default='azure',
+        help='LLM provider to use (default: azure)'
+    )
+
     # Optional arguments
     parser.add_argument(
         '--symbol',
@@ -229,24 +238,28 @@ def main():
         default='output',
         help='Output directory (default: output)'
     )
-    
+
     args = parser.parse_args()
-    
+
     # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
-    
+
+    # Create agents with specified provider
+    agents = create_agents(provider=args.provider)
+
     # Run appropriate analysis based on command
     if args.command == 'single':
-        print(f"Running single stock analysis for {args.symbol}")
-        run_single_analysis(args)
-    
+        print(f"Running single stock analysis for {args.symbol} using {args.provider}")
+        run_single_analysis(args, agents)
+
     elif args.command == 'optimize':
-        print(f"Running parameter optimization for {args.symbol}")
-        run_multi_parameter_analysis(args)
-    
+        print(f"Running parameter optimization for {args.symbol} using {args.provider}")
+        run_multi_parameter_analysis(args, agents)
+
     elif args.command == 'stocks':
-        print(f"Running multi-stock analysis")
-        run_multi_stock_analysis(args)
+        print(f"Running multi-stock analysis using {args.provider}")
+        run_multi_stock_analysis(args, agents)
 
 if __name__ == "__main__":
     main()
+
