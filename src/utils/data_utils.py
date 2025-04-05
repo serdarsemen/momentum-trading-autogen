@@ -21,16 +21,18 @@ def download_stock_data(
     symbol: str, 
     start_date: Union[str, datetime], 
     end_date: Optional[Union[str, datetime]] = None,
-    interval: str = '1d'
+    interval: str = '1d',
+    auto_adjust: bool = True
 ) -> pd.DataFrame:
     """
-    Download historical stock data from Yahoo Finance.
+    Download historical stock/crypto data from Yahoo Finance.
     
     Args:
-        symbol: Stock ticker symbol
+        symbol: Stock/crypto ticker symbol
         start_date: Start date for data retrieval
         end_date: End date for data retrieval (defaults to current date)
         interval: Data interval ('1d', '1wk', '1mo', etc.)
+        auto_adjust: Whether to automatically adjust the OHLC prices (default: True)
         
     Returns:
         DataFrame with historical price data
@@ -47,22 +49,28 @@ def download_stock_data(
     else:
         ssl._create_default_https_context = _create_unverified_https_context
     
-    # Create a session with custom headers
-    import requests
-    session = requests.Session()
-    session.headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36'
-    }
+    # Convert crypto symbol format if needed
+    if symbol.endswith('USDT'):
+        yahoo_symbol = f"{symbol[:-4]}-USD"  # Convert BTCUSDT to BTC-USD
+    else:
+        yahoo_symbol = symbol
     
     # Try to download with different methods
     try:
         # Method 1: Using yfinance with session
-        df = yf.download(symbol, start=start_date, end=end_date, interval=interval, session=session)
+        df = yf.download(
+            yahoo_symbol, 
+            start=start_date, 
+            end=end_date, 
+            interval=interval,
+            auto_adjust=auto_adjust,  # Explicitly set auto_adjust
+            progress=False  # Disable progress bar to avoid the warning message
+        )
         
         if df.empty:
             # Method 2: Try with pandas_datareader
             import pandas_datareader.data as web
-            df = web.DataReader(symbol, 'yahoo', start_date, end_date)
+            df = web.DataReader(yahoo_symbol, 'yahoo', start_date, end_date)
     except Exception as e:
         print(f"Error downloading data: {e}")
         # Method 3: Create dummy data for testing

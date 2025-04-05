@@ -32,6 +32,12 @@ from .bollinger_bands_strategy import (
     plot_bollinger_bands_strategy,
     run_bollinger_bands_analysis
 )
+from .fvg_strategy import (
+    fvg_trading_strategy,
+    identify_fvg,
+    plot_fvg_strategy,
+    run_fvg_analysis
+)
 
 __all__ = [
     'momentum_trading_strategy',
@@ -53,5 +59,9 @@ __all__ = [
     'bollinger_bands_strategy',
     'calculate_bollinger_bands',
     'plot_bollinger_bands_strategy',
-    'run_bollinger_bands_analysis'
+    'run_bollinger_bands_analysis',
+    'fvg_trading_strategy',
+    'identify_fvg',
+    'plot_fvg_strategy',
+    'run_fvg_analysis'
 ]
