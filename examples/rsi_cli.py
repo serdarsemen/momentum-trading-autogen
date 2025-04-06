@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.utils import download_stock_data, get_current_date
 from src.strategies import rsi_trading_strategy, compute_returns
+from src.agents.setup_agents import create_agents
 
 def validate_date(date_str):
     """Validate and parse date string."""
