@@ -40,7 +40,7 @@ def get_api_key(provider: str) -> str:
     env_var_map = {
         'openai': 'OPENAI_API_KEY',
         'azure': 'AZURE_OPENAI_API_KEY',
-        'gemini': 'GEMINI_API_KEY',
+        'gemini': 'GOOGLE_API_KEY',
         'groq': 'GROQ_API_KEY'
     }
 
@@ -112,7 +112,7 @@ def setup_llm_config(
         }]
 
     elif provider.lower() == 'gemini':
-        default_model = "gemini-pro" if not model else model
+        default_model = "gemini-2.5-pro-preview-03-25" if not model else model   #"gemini-pro"
         genai.configure(api_key=api_key)
         return [{
             "model": default_model,
@@ -122,7 +122,7 @@ def setup_llm_config(
         }]
 
     elif provider.lower() == 'groq':
-        default_model = "mixtral-8x7b-32768" if not model else model
+        default_model = "llama-3.3-70b-versatile" if not model else model   # "mixtral-8x7b-32768"
         client = Groq(api_key=api_key)
         return [{
             "model": default_model,

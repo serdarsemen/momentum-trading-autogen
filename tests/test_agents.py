@@ -11,7 +11,7 @@ class TestAgents(unittest.TestCase):
             'AZURE_OPENAI_API_KEY': 'test-azure-key',
             'AZURE_OPENAI_ENDPOINT': 'https://test.openai.azure.com',
             'AZURE_OPENAI_DEPLOYMENT': 'test-deployment',
-            'GEMINI_API_KEY': 'test-gemini-key',
+            'GOOGLE_API_KEY': 'test-gemini-key',
             'GROQ_API_KEY': 'test-groq-key'
         }
         self.patcher = patch.dict(os.environ, self.env_vars)
