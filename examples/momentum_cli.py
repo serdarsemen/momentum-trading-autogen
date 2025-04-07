@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from examples.manual_momentum_analysis import run_manual_analysis
 from examples.multi_pairs_momentum_analysis import run_multi_pair_analysis
 from examples.multi_stock_analysis import run_multi_stock_analysis
+from src.agents.setup_agents import create_agents, AVAILABLE_MODELS, get_default_model
 
 def main():
     parser = argparse.ArgumentParser(description='Momentum Trading Strategy Analysis')
@@ -29,6 +30,13 @@ def main():
         help='LLM provider to use (default: azure)'
     )
 
+    # Add model argument
+    parser.add_argument(
+        '--model',
+        type=str,
+        help='Specific model to use (if not specified, will use provider default)'
+    )
+
     # Optional arguments
     parser.add_argument('--symbol', type=str, default='NVDA',
                         help='Stock symbol to analyze (default: NVDA)')
@@ -45,6 +53,15 @@ def main():
 
     args = parser.parse_args()
 
+    # Validate and set default model if needed
+    if args.model is None:
+        args.model = get_default_model(args.provider)
+    elif args.model not in AVAILABLE_MODELS[args.provider]:
+        print(f"Warning: Model '{args.model}' not in known models for {args.provider}.")
+        print(f"Available models: {', '.join(AVAILABLE_MODELS[args.provider])}")
+        print(f"Using default model: {get_default_model(args.provider)}")
+        args.model = get_default_model(args.provider)
+
     # Set output directory
     os.makedirs(args.output, exist_ok=True)
 
@@ -57,8 +74,8 @@ def main():
     os.environ['ANALYSIS_LONG_WINDOW'] = str(args.long)
     os.environ['ANALYSIS_OUTPUT_DIR'] = args.output
 
-    # Create agents with specified provider
-    agents = create_agents(provider=args.provider)
+    # Create agents with specified provider and model
+    agents = create_agents(provider=args.provider, model=args.model)
 
     # Run requested analysis
     if args.command == 'single':

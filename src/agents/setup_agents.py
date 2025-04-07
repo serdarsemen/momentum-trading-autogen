@@ -24,6 +24,41 @@ from .prompt_templates import (
     FORECASTING_AGENT_PROMPT
 )
 
+# Available models for each provider
+AVAILABLE_MODELS = {
+    'azure': [
+        'gpt-4',
+        'gpt-4-turbo',
+        'gpt-35-turbo'
+    ],
+    'openai': [
+        'gpt-4-0125-preview',
+        'gpt-4-turbo-preview',
+        'gpt-4',
+        'gpt-3.5-turbo'
+    ],
+    'gemini': [
+        'gemini-2.5-pro-preview-03-25',
+        'gemini-1.5-pro',
+        'gemini-pro'
+    ],
+    'groq': [
+        'llama-3.3-70b-versatile',
+        'mixtral-8x7b-32768',
+        'gemma-7b-it'
+    ]
+}
+
+def get_default_model(provider: str) -> str:
+    """Get the default model for a provider."""
+    defaults = {
+        'azure': 'gpt-4',
+        'openai': 'gpt-4-0125-preview',
+        'gemini': 'gemini-2.5-pro-preview-03-25',
+        'groq': 'llama-3.3-70b-versatile'
+    }
+    return defaults.get(provider.lower())
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -112,12 +147,24 @@ def setup_llm_config(
         }]
 
     elif provider.lower() == 'gemini':
-        default_model = "gemini-2.5-pro-preview-03-25" if not model else model   #"gemini-pro"
+        default_model = "gemini-2.5-pro-preview-03-25" if not model else model
         genai.configure(api_key=api_key)
+
+        # Configure the model
+        model = genai.GenerativeModel(
+            model_name=default_model,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.7,
+                top_p=0.95,
+                top_k=40,
+                max_output_tokens=2048,
+            )
+        )
+
         return [{
             "model": default_model,
             "api_key": api_key,
-            "config_list": genai.get_default_generation_config(),
+            "client": model,
             "provider": "gemini"
         }]
 
