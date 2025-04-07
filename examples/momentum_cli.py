@@ -11,6 +11,35 @@ from examples.multi_pairs_momentum_analysis import run_multi_pair_analysis
 from examples.multi_stock_analysis import run_multi_stock_analysis
 from src.agents.setup_agents import create_agents, AVAILABLE_MODELS, get_default_model
 
+def select_provider():
+    """Display provider selection menu and return chosen provider."""
+    print("\nSelect LLM Provider:")
+    print("1. Azure OpenAI")
+    print("2. OpenAI")
+    print("3. Google Gemini")
+    print("4. Groq")
+
+    while True:
+        try:
+            choice = int(input("\nEnter your choice (1-4): "))
+            if 1 <= choice <= 4:
+                provider_map = {
+                    1: 'azure',
+                    2: 'openai',
+                    3: 'gemini',
+                    4: 'groq'
+                }
+                selected_provider = provider_map[choice]
+                default_model = get_default_model(selected_provider)
+                print(f"\nSelected Provider: {selected_provider.upper()}")
+                print(f"Default Model: {default_model}")
+                print(f"Available Models: {', '.join(AVAILABLE_MODELS[selected_provider])}")
+                return selected_provider
+            else:
+                print("Invalid choice. Please enter a number between 1 and 4.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 def main():
     parser = argparse.ArgumentParser(description='Momentum Trading Strategy Analysis')
 
@@ -21,20 +50,20 @@ def main():
         help='Analysis type: single (one pair for one stock), pairs (multiple MA pairs for one stock), stocks (one pair for multiple stocks)'
     )
 
-    # Add provider argument with azure as default
-    parser.add_argument(
-        '--provider',
-        type=str,
-        choices=['openai', 'azure', 'gemini', 'groq'],
-        default='azure',
-        help='LLM provider to use (default: azure)'
-    )
+    # Remove the provider argument since we're using interactive menu
 
     # Add model argument
     parser.add_argument(
         '--model',
         type=str,
         help='Specific model to use (if not specified, will use provider default)'
+    )
+
+    # Add Docker usage argument
+    parser.add_argument(
+        '--use-docker',
+        action='store_true',
+        help='Use Docker for code execution (default: False)'
     )
 
     # Optional arguments
@@ -53,41 +82,37 @@ def main():
 
     args = parser.parse_args()
 
-    # Validate and set default model if needed
-    if args.model is None:
-        args.model = get_default_model(args.provider)
-    elif args.model not in AVAILABLE_MODELS[args.provider]:
-        print(f"Warning: Model '{args.model}' not in known models for {args.provider}.")
-        print(f"Available models: {', '.join(AVAILABLE_MODELS[args.provider])}")
-        print(f"Using default model: {get_default_model(args.provider)}")
-        args.model = get_default_model(args.provider)
-
-    # Set output directory
+    # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
 
-    # Set environment variables for functions to use if needed
-    os.environ['ANALYSIS_SYMBOL'] = args.symbol
-    os.environ['ANALYSIS_START_DATE'] = args.start
-    if args.end:
-        os.environ['ANALYSIS_END_DATE'] = args.end
-    os.environ['ANALYSIS_SHORT_WINDOW'] = str(args.short)
-    os.environ['ANALYSIS_LONG_WINDOW'] = str(args.long)
-    os.environ['ANALYSIS_OUTPUT_DIR'] = args.output
+    # Get provider through interactive menu
+    provider = select_provider()
 
-    # Create agents with specified provider and model
-    agents = create_agents(provider=args.provider, model=args.model)
+    # Create agents with Docker configuration
+    agents = create_agents(
+        provider=provider,
+        model=args.model,
+        use_docker=args.use_docker,
+        work_dir=args.output
+    )
 
     # Run requested analysis
     if args.command == 'single':
-        print(f"Running single pair analysis for {args.symbol} with MA ({args.short}, {args.long}) using {args.provider}")
+        print(f"\nRunning single pair analysis for {args.symbol}")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_manual_analysis(args, agents)
 
     elif args.command == 'pairs':
-        print(f"Running multi-pair analysis for {args.symbol} using {args.provider}")
+        print(f"\nRunning multi-pair analysis for {args.symbol}")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_multi_pair_analysis(args, agents)
 
     elif args.command == 'stocks':
-        print(f"Running multi-stock analysis with MA ({args.short}, {args.long}) using {args.provider}")
+        print(f"\nRunning multi-stock analysis")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_multi_stock_analysis(args, agents)
 
 if __name__ == "__main__":

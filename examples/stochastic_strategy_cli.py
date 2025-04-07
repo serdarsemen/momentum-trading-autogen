@@ -5,13 +5,13 @@ Command-line interface for Stochastic Oscillator trading strategy analysis.
 import sys
 import os
 import argparse
-from datetime import datetime, date
-import pandas as pd
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.utils import download_stock_data, get_current_date, create_agents
-from src.strategies import run_stochastic_analysis
+from src.utils import download_stock_data, get_current_date
+from src.strategies import stochastic_trading_strategy, compute_returns
+from src.agents.setup_agents import create_agents, get_default_model, AVAILABLE_MODELS
 
 def validate_date(date_str):
     """Validate and parse date string."""
@@ -217,6 +217,35 @@ def run_multi_stock_analysis(args, agents):
     except Exception as e:
         print(f"Error running multi-stock analysis: {e}")
 
+def select_provider():
+    """Display provider selection menu and return chosen provider."""
+    print("\nSelect LLM Provider:")
+    print("1. Azure OpenAI")
+    print("2. OpenAI")
+    print("3. Google Gemini")
+    print("4. Groq")
+
+    while True:
+        try:
+            choice = int(input("\nEnter your choice (1-4): "))
+            if 1 <= choice <= 4:
+                provider_map = {
+                    1: 'azure',
+                    2: 'openai',
+                    3: 'gemini',
+                    4: 'groq'
+                }
+                selected_provider = provider_map[choice]
+                default_model = get_default_model(selected_provider)
+                print(f"\nSelected Provider: {selected_provider.upper()}")
+                print(f"Default Model: {default_model}")
+                print(f"Available Models: {', '.join(AVAILABLE_MODELS[selected_provider])}")
+                return selected_provider
+            else:
+                print("Invalid choice. Please enter a number between 1-4.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
 def main():
     parser = argparse.ArgumentParser(
         description='Stochastic Oscillator Trading Strategy Analysis'
@@ -230,14 +259,7 @@ def main():
              'stocks (multiple stocks)'
     )
 
-    # Add provider argument with azure as default
-    parser.add_argument(
-        '--provider',
-        type=str,
-        choices=['openai', 'azure', 'gemini', 'groq'],
-        default='azure',
-        help='LLM provider to use (default: azure)'
-    )
+    # Remove the provider argument since we're using interactive menu
 
     # Optional arguments
     parser.add_argument(
@@ -306,23 +328,34 @@ def main():
     # Create output directory if it doesn't exist
     os.makedirs(args.output, exist_ok=True)
 
+    # Get provider through interactive menu
+    provider = select_provider()
+
     # Create agents with specified provider
-    agents = create_agents(provider=args.provider)
+    agents = create_agents(provider=provider)
 
     # Run appropriate analysis based on command
     if args.command == 'single':
-        print(f"Running single stock analysis for {args.symbol} using {args.provider}")
+        print(f"\nRunning single stock analysis for {args.symbol}")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_single_analysis(args, agents)
 
     elif args.command == 'optimize':
-        print(f"Running parameter optimization for {args.symbol} using {args.provider}")
+        print(f"\nRunning parameter optimization for {args.symbol}")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_multi_parameter_analysis(args, agents)
 
     elif args.command == 'stocks':
-        print(f"Running multi-stock analysis using {args.provider}")
+        print(f"\nRunning multi-stock analysis")
+        print(f"Using Provider: {provider.upper()}")
+        print(f"Using Model: {get_default_model(provider)}\n")
         run_multi_stock_analysis(args, agents)
 
 if __name__ == "__main__":
     main()
+
+
 
 

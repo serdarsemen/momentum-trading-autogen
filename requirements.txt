@@ -41,3 +41,9 @@ certifi>=2025.1.31
 python-dotenv>=1.0.0
 
 tensorflow
+vertexai
+ag2
+jsonschema
+ag2[gemini]
+
+

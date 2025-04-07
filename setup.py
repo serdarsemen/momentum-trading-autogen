@@ -13,14 +13,18 @@ setup(
         "numpy>=1.20.0",
         "matplotlib>=3.5.0",
         "yfinance>=0.2.0",
-        "pyautogen>=0.7.0",
+        "pyautogen>=0.2.0",
+        "google-generativeai>=0.3.0",
+        "groq>=0.4.0",
+        "openai>=1.12.0",
         "streamlit>=1.22.0",
         "plotly>=5.13.0",
         "jupyter>=1.0.0",
         "seaborn>=0.12.0",
         "pandas-datareader>=0.10.0",
         "requests>=2.28.0",
-        "diskcache>=5.6.0"  # Used by AutoGen
+        "diskcache>=5.6.0",
+        "python-dotenv>=1.0.0"
     ],
     extras_require={
         "dev": [

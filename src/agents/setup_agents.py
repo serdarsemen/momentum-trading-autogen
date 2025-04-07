@@ -27,7 +27,7 @@ from .prompt_templates import (
 # Available models for each provider
 AVAILABLE_MODELS = {
     'azure': [
-        'gpt-4',
+        'gpt-4o',
         'gpt-4-turbo',
         'gpt-35-turbo'
     ],
@@ -44,7 +44,6 @@ AVAILABLE_MODELS = {
     ],
     'groq': [
         'llama-3.3-70b-versatile',
-        'mixtral-8x7b-32768',
         'gemma-7b-it'
     ]
 }
@@ -99,28 +98,10 @@ def setup_llm_config(
 ) -> List[Dict[str, Any]]:
     """
     Set up LLM configuration based on the provider.
-
-    Args:
-        provider: LLM provider ('openai', 'azure', 'gemini', or 'groq')
-        model: Model name (optional, provider-specific default will be used if not specified)
-        azure_endpoint: Azure OpenAI endpoint URL (optional, required for Azure)
-        azure_deployment: Azure deployment name (optional, required for Azure)
-        azure_api_version: Azure API version (optional)
-
-    Returns:
-        Configuration list for the LLM
     """
     api_key = get_api_key(provider)
 
-    if provider.lower() == 'openai':
-        default_model = "gpt-4" if not model else model
-        return [{
-            "model": default_model,
-            "api_key": api_key,
-            "client": OpenAI(api_key=api_key)
-        }]
-
-    elif provider.lower() == 'azure':
+    if provider.lower() == 'azure':
         if not azure_endpoint:
             azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
         if not azure_deployment:
@@ -130,56 +111,38 @@ def setup_llm_config(
             raise ValueError("Azure OpenAI requires endpoint URL and deployment name. "
                            "Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT in .env file.")
 
-        client = AzureOpenAI(
-            api_key=api_key,
-            api_version=azure_api_version,
-            azure_endpoint=azure_endpoint
-        )
-
         return [{
             "model": azure_deployment,
             "api_key": api_key,
+            "api_type": "azure",
             "api_version": azure_api_version,
-            "azure_endpoint": azure_endpoint,
-            "azure_deployment": azure_deployment,
-            "client": client,
-            "provider": "azure"
+            "base_url": azure_endpoint
+        }]
+
+    elif provider.lower() == 'openai':
+        return [{
+            "model": model or "gpt-4",
+            "api_key": api_key,
+            "api_type": "openai"
         }]
 
     elif provider.lower() == 'gemini':
-        default_model = "gemini-2.5-pro-preview-03-25" if not model else model
         genai.configure(api_key=api_key)
-
-        # Configure the model
-        model = genai.GenerativeModel(
-            model_name=default_model,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=2048,
-            )
-        )
-
         return [{
-            "model": default_model,
+            "model": model or "gemini-2.5-pro-preview-03-25",
             "api_key": api_key,
-            "client": model,
-            "provider": "gemini"
+            "api_type": "google"
         }]
 
     elif provider.lower() == 'groq':
-        default_model = "llama-3.3-70b-versatile" if not model else model   # "mixtral-8x7b-32768"
-        client = Groq(api_key=api_key)
         return [{
-            "model": default_model,
+            "model": model or "llama-3.3-70b-versatile",
             "api_key": api_key,
-            "client": client,
-            "provider": "groq"
+            "api_type": "groq"
         }]
 
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Use 'openai', 'azure', 'gemini', or 'groq'")
+        raise ValueError(f"Unsupported provider: {provider}")
 
 def create_agents(
     provider: str = "openai",
@@ -187,21 +150,20 @@ def create_agents(
     work_dir: str = "output",
     azure_endpoint: str = None,
     azure_deployment: str = None,
-    azure_api_version: str = "2024-02-15-preview"
+    azure_api_version: str = "2024-02-15-preview",
+    use_docker: bool = False  # Added parameter to control Docker usage
 ) -> Dict[str, ConversableAgent]:
     """
     Create and initialize the AutoGen agents with support for multiple LLM providers.
 
     Args:
-        provider: LLM provider ('openai', 'azure', 'gemini', or 'groq')
-        model: Model name (optional)
-        work_dir: Directory for code execution
+        provider: LLM provider name
+        model: Model name to use
+        work_dir: Working directory for code execution
         azure_endpoint: Azure OpenAI endpoint URL
-        azure_deployment: Azure deployment name
-        azure_api_version: Azure API version
-
-    Returns:
-        Dictionary containing all the initialized agents
+        azure_deployment: Azure OpenAI deployment name
+        azure_api_version: Azure OpenAI API version
+        use_docker: Whether to use Docker for code execution (default: False)
     """
     # Set up LLM configuration
     config_list = setup_llm_config(
@@ -212,11 +174,12 @@ def create_agents(
         azure_api_version
     )
 
-    # Initialize the code executor
-    code_executor = LocalCommandLineCodeExecutor(
-        timeout=60,
-        work_dir=work_dir,
-    )
+    # Create base LLM configuration
+    llm_config = {
+        "seed": 42,
+        "config_list": config_list,
+        "temperature": 0.7
+    }
 
     # Create agents with the configured LLM
     agents = {}
@@ -228,23 +191,25 @@ def create_agents(
     ]
 
     for name, prompt in agent_configs:
+        agent_config = llm_config.copy()
         agents[name] = AssistantAgent(
             name=name,
             system_message=prompt,
-            llm_config={
-                "config_list": config_list,
-                "provider": provider
-            }
+            llm_config=agent_config
         )
 
-    # Add the code executor agent
+    # Add the code executor agent with Docker configuration
+    code_execution_config = {
+        "work_dir": work_dir,
+        "timeout": 60,
+        "last_n_messages": 3,
+        "use_docker": use_docker  # Control Docker usage
+    }
+
     agents["code_executor"] = UserProxyAgent(
-        name="Code_executor",
-        code_execution_config={
-            "executor": code_executor
-        },
-        llm_config=False,
-        human_input_mode="NEVER"
+        name="code_executor",
+        human_input_mode="NEVER",
+        code_execution_config=code_execution_config
     )
 
     return agents
